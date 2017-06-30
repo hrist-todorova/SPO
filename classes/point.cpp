@@ -13,7 +13,6 @@
 #include <future>
 
 #define FLOAT_EPS 0.00001
-#define GRANULARITY 10
 
 using namespace std;
 
@@ -58,15 +57,18 @@ public:
         }
     }
     Point operator[](unsigned int i) { return points[i];}
+
     void add_point(Point temp){
         points.push_back(temp);
     }
+
     size_t size(){
         return points.size();
     }
+
     PointsVector get_elements(int from, int to){
         PointsVector result;
-        for(int i = from; i < to; i++){
+        for(int i = from; i < to && i < points.size(); i++){
             result.add_point(points[i]);
         }
         return result;

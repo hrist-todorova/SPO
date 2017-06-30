@@ -14,7 +14,6 @@
 #include "point.cpp"
 
 #define FLOAT_EPS 0.00001
-#define GRANULARITY 10
 
 using namespace std;
 
@@ -49,7 +48,7 @@ public:
         return c;
     }
 
-    void print_info(){
+    void print(){
         cout << "Circle with radius = " << r << " and center (" << c.get_x() << ", ";
         cout << c.get_y() << ")." << endl;
     }
@@ -58,7 +57,7 @@ public:
         return c.distance(a) <= r + FLOAT_EPS;
     }
 
-    bool circle_contains_all_points(PointsVector vec){
+    bool circle_contains_all_points(PointsVector& vec){
         for(size_t i = 0; i < vec.size(); i++){
             if(!contains_point(vec[i]))
                 return false;
@@ -75,7 +74,7 @@ public:
 
     Circle operator[](unsigned int i) { return circles[i];}
 
-    CirclesVector& operator=(CirclesVector other){
+    CirclesVector& operator=(CirclesVector& other){
         if(this == &other)
             return* this;
         this->circles = other.get_vector();
@@ -95,7 +94,7 @@ public:
     }
     CirclesVector get_elements(int from, int to){
         CirclesVector result;
-        for(int i = from; i < to; i++){
+        for(int i = from; i < to && i < circles.size(); i++){
             result.add_circle(circles[i]);
         }
         return result;
@@ -103,11 +102,11 @@ public:
 
     void print(){
         for(size_t i = 0; i < circles.size(); i++){
-            circles[i].print_info();
+            circles[i].print();
         }
     }
 
-    Circle smallest_circle(PointsVector vec){
+    Circle smallest_circle(PointsVector& vec){
         Circle result = Circle(Point(0,0), -1);
         bool found = false;
 
