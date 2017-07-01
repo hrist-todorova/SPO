@@ -111,11 +111,11 @@ public:
         bool found = false;
 
         for(size_t i = 0; i < circles.size(); i++){
-            if(!found && circles[i].circle_contains_all_points(vec)){
+            if(!found){
                 found = true;
                 result = circles[i];
             }
-            if(found && circles[i].circle_contains_all_points(vec) && result.get_radius() > circles[i].get_radius()){
+            if(found && result.get_radius() > circles[i].get_radius()){
                 result = circles[i];
             }
         }

@@ -16,7 +16,7 @@
 #include "classes/circle.cpp"
 
 #define FLOAT_EPS 0.00001
-#define GRANULARITY 80
+#define GRANULARITY 35
 
 using namespace std;
 using namespace chrono;
@@ -25,7 +25,6 @@ int points_num = 2;
 string path = "";
 int tasks = 1;
 bool quiet_mode = false;
-bool use_all_threads = false;
 
 Circle make_circle_by_two_points(Point one, Point two){
     Point c = one.middle_point(two);
@@ -49,17 +48,17 @@ Circle make_circle_by_three_points(Point one, Point two, Point three){
     return Circle(center, r);
 }
 
-CirclesVector make_all_possible_circles(PointsVector& data, int tasks_num, bool silence = false){
+CirclesVector make_all_possible_circles(PointsVector& data, int tasks_num){
     CirclesVector result;
     int n = 0;
     vector<thread> th(tasks_num);
     mutex mn, mresult;
 
-    if(!quiet_mode && !silence)
+    if(!quiet_mode)
         printf("Generating circles by two points ...\n");
     for(int i = 0; i < tasks_num; i++){
         th[i] = thread([&, i](){
-            if(!quiet_mode && !silence)
+            if(!quiet_mode)
                 printf("Thread %d started.\n", i + 1);
             while(n < data.size() - 1){
                 mn.lock();
@@ -69,14 +68,14 @@ CirclesVector make_all_possible_circles(PointsVector& data, int tasks_num, bool 
                 mn.unlock();
                 for(int t = index + 1; t < data.size(); t++){
                     Circle temp = make_circle_by_two_points(first_point, data[t]);
-                    if(temp.isValid()){
+                    if(temp.isValid() && temp.circle_contains_all_points(data)){
                         mresult.lock();
                         result.add_circle(temp);
                         mresult.unlock();
                     }
                 }
             }
-            if(!quiet_mode && !silence)
+            if(!quiet_mode)
                 printf("Thread %d stopped.\n", i + 1);
         });
     }
@@ -85,13 +84,13 @@ CirclesVector make_all_possible_circles(PointsVector& data, int tasks_num, bool 
         th[i].join();
     }
 
-    if(!quiet_mode && !silence)
+    if(!quiet_mode)
         printf("Generating circles by three points ...\n");
 
     n = 0;
     for(int i = 0; i < tasks_num; i++){
         th[i] = thread([&, i](){
-            if(!quiet_mode && !silence)
+            if(!quiet_mode)
                 printf("Thread %d started.\n", i + 1);
             while(n < data.size() - 2){
                 mn.lock();
@@ -102,7 +101,7 @@ CirclesVector make_all_possible_circles(PointsVector& data, int tasks_num, bool 
                 for(int t = index + 1; t < data.size() - 1; t++){
                     for(int y = t + 1; y < data.size(); y++){
                         Circle temp = make_circle_by_three_points(first_point, data[t], data[y]);
-                        if(temp.isValid()){
+                        if(temp.isValid() && temp.circle_contains_all_points(data)){
                             mresult.lock();
                             result.add_circle(temp);
                             mresult.unlock();
@@ -110,7 +109,7 @@ CirclesVector make_all_possible_circles(PointsVector& data, int tasks_num, bool 
                     }
                 }
             }
-            if(!quiet_mode && !silence)
+            if(!quiet_mode)
                 printf("Thread %d stopped.\n", i + 1);
         });
     }
@@ -141,7 +140,7 @@ PointsVector read_file(string path){
     return result;
 }
 
-Circle find_circle(CirclesVector circles, PointsVector& points, int task, bool silence = false){
+Circle find_circle(CirclesVector circles, PointsVector& points, int task){
     vector<thread> th(task);
     mutex mvect, mn;
 
@@ -150,7 +149,7 @@ Circle find_circle(CirclesVector circles, PointsVector& points, int task, bool s
         size_t n = 0;
         for(int i = 0; i < task; i++){
             th[i] = thread([&, i](){
-                if(!quiet_mode && !silence)
+                if(!quiet_mode)
                     printf("Thread %d started.\n", i + 1);
                 while(n < circles.size()){
                     mn.lock();
@@ -161,7 +160,7 @@ Circle find_circle(CirclesVector circles, PointsVector& points, int task, bool s
                     if(small.get_radius() != -1)
                         temp.add_circle(small);
                 }
-                if(!quiet_mode && !silence)
+                if(!quiet_mode)
                     printf("Thread %d stopped.\n", i + 1);
             });
         }
@@ -177,15 +176,15 @@ Circle find_circle(CirclesVector circles, PointsVector& points, int task, bool s
     return circles[0];
 }
 
-void find_smallest_enclosing_circle(PointsVector& data, int tasks_num){
+void find_smallest_enclosing_circle(PointsVector& data){
     auto start = high_resolution_clock::now();
 
-    CirclesVector circles = make_all_possible_circles(data, tasks_num);
+    CirclesVector circles = make_all_possible_circles(data, tasks);
     if(!quiet_mode)
         printf("%u circles created.\n", circles.size());
 
     printf("Finding the smallest circle ..... \n");
-    Circle c = find_circle(circles, data, tasks_num);
+    Circle c = find_circle(circles, data, tasks);
     auto ending = high_resolution_clock::now();
 
     printf("\nThe circle we are looking for is: \n");
@@ -198,26 +197,6 @@ void find_smallest_enclosing_circle(PointsVector& data, int tasks_num){
     cout << secs.count() << "s\n";
     cout << ms.count() << "ms\n";
     printf ("\n");
-}
-
-void find_smallest_enclosing_circle(PointsVector& data){
-    for(int i = 1; i <= 20; i++){
-        cout << "NUMBER OF THREADS: \n" << i << endl;
-        auto start = high_resolution_clock::now();
-
-        CirclesVector circles = make_all_possible_circles(data, i, true);
-        Circle c = find_circle(circles, data, i, true);
-
-        auto ending = high_resolution_clock::now();
-
-        duration<float> secs = ending - start;
-        milliseconds ms = duration_cast<milliseconds>(secs);
-        printf("\nTime used to calculate the problem: \n");
-        cout << secs.count() << "s\n";
-        cout << ms.count() << "ms\n";
-        printf ("\n");
-    }
-    //https://www.desmos.com/calculator
 }
 
 int main(int argc, char *argv[])
@@ -235,9 +214,6 @@ int main(int argc, char *argv[])
         if(strcmp(argv[i], "-q") == 0){
             quiet_mode = true;
         }
-        if(strcmp(argv[i], "-all") == 0){
-            use_all_threads = true;
-        }
     }
 
     PointsVector points;
@@ -253,10 +229,7 @@ int main(int argc, char *argv[])
         printf("The points are created.\n");
 
     if(points.size() >= 2){
-        if(!use_all_threads)
-            find_smallest_enclosing_circle(points, tasks);
-        else
-            find_smallest_enclosing_circle(points);
+        find_smallest_enclosing_circle(points);
     }
 
 
